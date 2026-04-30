@@ -27,6 +27,11 @@ if ! is_server_running; then
     exit 0  # Server not running, skip silently
 fi
 
+# Check if audio is muted
+if [[ -f "${PLUGIN_ROOT}/tts/.muted" ]]; then
+    exit 0
+fi
+
 # Extract the last assistant response text
 RESPONSE_TEXT=$("${PLUGIN_ROOT}/bin/extract-response.py" "${TRANSCRIPT_PATH}")
 

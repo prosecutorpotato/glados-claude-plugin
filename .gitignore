@@ -16,6 +16,9 @@ plugin/tts/audio/
 plugin/tts/server.pid
 plugin/tts/server.log
 
+# Mute state flag (user-toggled at runtime)
+plugin/tts/.muted
+
 # Plans (auto-generated, may contain local paths)
 plans/
 
