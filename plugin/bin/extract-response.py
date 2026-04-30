@@ -38,21 +38,28 @@ def extract_last_response(transcript_path):
     """Extract the last assistant message from transcript JSON or JSONL."""
     messages = []
 
-    # Strategy 1: Try JSONL history file (Cortex Code format)
-    # Cortex Code stores messages in .history.jsonl alongside the .json metadata file
-    jsonl_path = transcript_path.replace('.json', '.history.jsonl')
+    # Strategy 1: JSONL file (direct path or .history.jsonl companion)
+    # Claude Code: each line is {"message": {"role":..., "content":...}, ...}
+    # Cortex Code: each line is {"role":..., "content":...} (flat messages)
+    jsonl_path = transcript_path
+    if not jsonl_path.endswith('.jsonl'):
+        jsonl_path = transcript_path.replace('.json', '.history.jsonl')
     if os.path.isfile(jsonl_path):
         try:
             with open(jsonl_path, 'r') as f:
                 for line in f:
                     line = line.strip()
                     if line:
-                        messages.append(json.loads(line))
+                        entry = json.loads(line)
+                        if "message" in entry and isinstance(entry["message"], dict):
+                            messages.append(entry["message"])
+                        elif "role" in entry:
+                            messages.append(entry)
         except (json.JSONDecodeError, FileNotFoundError):
             messages = []
 
-    # Strategy 2: Fall back to original JSON format (Claude Code format)
-    if not messages:
+    # Strategy 2: JSON transcript file (array of messages or {messages: [...]})
+    if not messages and not transcript_path.endswith('.jsonl'):
         try:
             with open(transcript_path, 'r') as f:
                 transcript = json.load(f)
@@ -61,25 +68,26 @@ def extract_last_response(transcript_path):
 
         messages = transcript if isinstance(transcript, list) else transcript.get("messages", [])
 
-    # Find the last assistant message
+    # Find the last assistant message that contains actual text (skip tool_use-only messages)
     last_assistant_text = ""
     for msg in reversed(messages):
         role = msg.get("role", "")
         if role == "assistant":
-            # Extract text content
             content = msg.get("content", "")
             if isinstance(content, list):
-                # Handle structured content blocks
                 text_parts = []
                 for block in content:
                     if isinstance(block, dict) and block.get("type") == "text":
                         text_parts.append(block.get("text", ""))
                     elif isinstance(block, str):
                         text_parts.append(block)
-                last_assistant_text = " ".join(text_parts)
-            elif isinstance(content, str):
+                candidate = " ".join(text_parts).strip()
+                if candidate:
+                    last_assistant_text = candidate
+                    break
+            elif isinstance(content, str) and content.strip():
                 last_assistant_text = content
-            break
+                break
 
     if not last_assistant_text:
         return ""

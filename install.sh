@@ -16,13 +16,16 @@ echo ""
 # --- Python venv setup ---
 echo "[1/4] Setting up Python virtual environment..."
 
-if [[ ! -d "${VENV_DIR}" ]]; then
-    python3 -m venv "${VENV_DIR}"
+if ! command -v uv &>/dev/null; then
+    echo "  ✗ 'uv' not found. Install it: https://docs.astral.sh/uv/getting-started/installation/" >&2
+    exit 1
 fi
 
-source "${VENV_DIR}/bin/activate"
-pip install --upgrade pip -q --index-url https://pypi.org/simple/
-pip install -r "${TTS_DIR}/requirements.txt" -q --index-url https://pypi.org/simple/
+if [[ ! -d "${VENV_DIR}" ]]; then
+    uv venv --python 3.12 "${VENV_DIR}"
+fi
+
+uv pip install -r "${TTS_DIR}/requirements.txt" -q -p "${VENV_DIR}/bin/python"
 
 echo "  ✓ Dependencies installed"
 
@@ -172,12 +175,18 @@ MERGE_EOF
 register_claude_code() {
     local config_dir="$HOME/.claude"
     local settings_file="${config_dir}/settings.json"
+    local skills_dir="${config_dir}/skills/glados"
 
     # Claude Code uses a different settings structure
     if [[ ! -d "${config_dir}" ]]; then
         echo "  - Claude Code not detected (no ~/.claude), skipping"
         return 0
     fi
+
+    # Install skill files
+    mkdir -p "${skills_dir}"
+    cp -f "${PLUGIN_DIR}/skills/glados/"*.md "${skills_dir}/"
+    echo "  ✓ GLaDOS skill installed to ${skills_dir}"
 
     if [[ ! -f "${settings_file}" ]]; then
         cat > "${settings_file}" << SETTINGS_EOF
