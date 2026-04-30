@@ -63,6 +63,21 @@ Once installed, the plugin activates automatically when a session starts:
 
 Text responses display immediately — audio synthesis and playback happen asynchronously in the background.
 
+### Audio Control
+
+```bash
+# Mute TTS (audio stops, text responses still display)
+./plugin/bin/glados_mute.sh
+
+# Unmute TTS (audio resumes)
+./plugin/bin/glados_unmute.sh
+
+# Restart the TTS server
+./plugin/bin/glados_restart_server.sh
+```
+
+Muting is useful when you're in a meeting or don't want audio playback. The mute state persists across responses until you unmute.
+
 ### Manual Server Control
 
 ```bash
@@ -142,6 +157,9 @@ glados-claude-plugin/
 │   │   ├── serve.sh                # Start TTS server (SessionStart hook)
 │   │   ├── speak.sh                # Async synthesize + play (Stop hook)
 │   │   ├── stop.sh                 # Stop TTS server
+│   │   ├── glados_mute.sh          # Mute audio playback
+│   │   ├── glados_unmute.sh        # Unmute audio playback
+│   │   ├── glados_restart_server.sh # Restart TTS server
 │   │   └── extract-response.py     # Parse transcript for TTS input
 │   └── lib/
 │       └── tts-helpers.sh          # Shared bash utilities
@@ -197,6 +215,7 @@ MIT — see [LICENSE](LICENSE)
 - macOS: Ensure `afplay` is available (built into macOS)
 - Linux: Ensure `aplay` is installed (`sudo apt install alsa-utils`)
 - Check that the TTS server responds: `curl http://localhost:8124/health`
+- Check if audio is muted: `ls plugin/tts/.muted` — if the file exists, run `./plugin/bin/glados_unmute.sh`
 
 ### Audio delays text display
 - This shouldn't happen — synthesis runs in a background subshell
