@@ -31,6 +31,7 @@ The install script will:
 2. Install Python dependencies (PyTorch, Flask, deep-phonemizer, etc.)
 3. Download the TTS model files (~260MB) from the R2D2FISH/glados-tts repo
 4. Register global hooks and skills for both **Cortex Code** and **Claude Code**
+5. Install slash commands (`/glados_mute`, `/glados_unmute`, `/glados_restart_server`)
 
 ### What Gets Registered
 
@@ -38,7 +39,9 @@ The install script will:
 |----------|----------------|------|
 | Cortex Code | `~/.snowflake/cortex/settings.json` | SessionStart + Stop hooks |
 | Cortex Code | `~/.snowflake/cortex/skills/glados/` | GLaDOS personality skill |
+| Cortex Code | `~/.snowflake/cortex/commands/` | Slash commands |
 | Claude Code | `~/.claude/settings.json` | SessionStart + Stop hooks |
+| Claude Code | `~/.claude/commands/` | Slash commands |
 
 ### Manual Model Download
 
@@ -65,16 +68,13 @@ Text responses display immediately — audio synthesis and playback happen async
 
 ### Audio Control
 
-```bash
-# Mute TTS (audio stops, text responses still display)
-./plugin/bin/glados_mute.sh
+Use the slash commands in-session or run the scripts directly:
 
-# Unmute TTS (audio resumes)
-./plugin/bin/glados_unmute.sh
-
-# Restart the TTS server
-./plugin/bin/glados_restart_server.sh
-```
+| Command | Script | Effect |
+|---------|--------|--------|
+| `/glados_mute` | `./plugin/bin/glados_mute.sh` | Mute TTS (text responses still display) |
+| `/glados_unmute` | `./plugin/bin/glados_unmute.sh` | Unmute TTS (audio resumes) |
+| `/glados_restart_server` | `./plugin/bin/glados_restart_server.sh` | Restart the TTS server |
 
 Muting is useful when you're in a meeting or don't want audio playback. The mute state persists across responses until you unmute.
 
@@ -120,6 +120,7 @@ This removes:
 - Audio cache
 - Global hooks from Cortex Code and Claude Code settings
 - GLaDOS skill from `~/.snowflake/cortex/skills/`
+- Slash commands from both platforms
 
 Plugin source code remains.
 

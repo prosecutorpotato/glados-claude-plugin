@@ -146,6 +146,29 @@ MERGE_EOF
 unregister_cortex_code
 unregister_claude_code
 
+# --- Remove slash commands ---
+echo "Removing slash commands..."
+
+remove_slash_commands() {
+    local commands_dir="$1"
+    local label="$2"
+    local removed=false
+
+    for cmd in glados_mute glados_unmute glados_restart_server; do
+        if [[ -f "${commands_dir}/${cmd}.md" ]]; then
+            rm -f "${commands_dir}/${cmd}.md"
+            removed=true
+        fi
+    done
+
+    if [[ "${removed}" == "true" ]]; then
+        echo "  ✓ ${label} commands removed"
+    fi
+}
+
+remove_slash_commands "$HOME/.snowflake/cortex/commands" "Cortex Code"
+remove_slash_commands "$HOME/.claude/commands" "Claude Code"
+
 # --- Remove models ---
 if [[ -d "${TTS_DIR}/models" ]]; then
     echo "Removing models..."

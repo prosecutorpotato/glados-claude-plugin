@@ -67,13 +67,13 @@ download_model "${PHONEMIZER_URL}" "${MODELS_DIR}/en_us_cmudict_ipa_forward.pt" 
 
 # --- Audio directory ---
 echo ""
-echo "[3/4] Creating audio cache directory..."
+echo "[3/5] Creating audio cache directory..."
 mkdir -p "${TTS_DIR}/audio"
 echo "  ✓ Done"
 
 # --- Global registration ---
 echo ""
-echo "[4/4] Registering plugin globally..."
+echo "[4/5] Registering plugin globally..."
 
 register_cortex_code() {
     local config_dir="$HOME/.snowflake/cortex"
@@ -262,6 +262,41 @@ register_cortex_code
 echo "  Registering for Claude Code..."
 register_claude_code
 
+# --- Slash commands ---
+echo ""
+echo "[5/5] Installing slash commands..."
+
+install_slash_commands() {
+    local commands_dir="$1"
+    local label="$2"
+
+    mkdir -p "${commands_dir}"
+
+    cat > "${commands_dir}/glados_mute.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_mute.sh
+CMD_EOF
+
+    cat > "${commands_dir}/glados_unmute.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_unmute.sh
+CMD_EOF
+
+    cat > "${commands_dir}/glados_restart_server.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_restart_server.sh
+CMD_EOF
+
+    echo "  ✓ ${label}: /glados_mute, /glados_unmute, /glados_restart_server"
+}
+
+# Cortex Code commands
+install_slash_commands "$HOME/.snowflake/cortex/commands" "Cortex Code"
+
+# Claude Code commands (if ~/.claude exists)
+if [[ -d "$HOME/.claude" ]]; then
+    install_slash_commands "$HOME/.claude/commands" "Claude Code"
+else
+    echo "  - Claude Code not detected, skipping commands"
+fi
+
 # --- Done ---
 echo ""
 echo "======================================"
@@ -278,3 +313,8 @@ echo "  ${PLUGIN_DIR}/bin/stop.sh"
 echo ""
 echo "The plugin will auto-start the TTS server when a session begins."
 echo "Use /glados in-session to activate the GLaDOS personality."
+echo ""
+echo "Slash commands available:"
+echo "  /glados_mute            - Mute audio playback"
+echo "  /glados_unmute          - Unmute audio playback"
+echo "  /glados_restart_server  - Restart the TTS server"
