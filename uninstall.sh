@@ -86,6 +86,13 @@ MERGE_EOF
 unregister_claude_code() {
     local config_dir="$HOME/.claude"
     local settings_file="${config_dir}/settings.json"
+    local skills_dir="${config_dir}/skills/glados"
+
+    # Remove skill directory
+    if [[ -d "${skills_dir}" ]]; then
+        rm -rf "${skills_dir}"
+        echo "  ✓ Removed skill from ${skills_dir}"
+    fi
 
     if [[ ! -f "${settings_file}" ]]; then
         return 0
