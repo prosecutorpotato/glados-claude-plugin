@@ -21,6 +21,9 @@ def strip_markdown(text):
     # Remove bold/italic markers
     text = re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', text)
     text = re.sub(r'_{1,3}([^_]+)_{1,3}', r'\1', text)
+    # Remove markdown tables (keep cell text, drop pipes and header separators)
+    text = re.sub(r'^\|?[-:| ]+\|?$', '', text, flags=re.MULTILINE)  # header separator rows
+    text = re.sub(r'\|', ' ', text)  # remaining pipes → spaces
     # Remove links, keep text
     text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
     # Remove bullet points

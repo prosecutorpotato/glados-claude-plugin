@@ -15,7 +15,6 @@ _whitespace_re = re.compile(r'\s+')
 # Symbol/character expansions for characters the phonemizer can't handle
 _symbol_expansions = [
     ('+', ' plus '),
-    ('-', ' minus '),
     ('=', ' equals '),
     ('&', ' and '),
     ('@', ' at '),
@@ -26,7 +25,7 @@ _symbol_expansions = [
     ('\\', ' backslash '),
     ('~', ' tilde '),
     ('^', ' caret '),
-    ('|', ' pipe '),
+    ('|', ' '),
     ('<', ' less than '),
     ('>', ' greater than '),
     ('_', ' underscore '),
@@ -76,6 +75,21 @@ def expand_symbols(text):
     """Expand symbols like +, -, = to spoken words."""
     for symbol, expansion in _symbol_expansions:
         text = text.replace(symbol, expansion)
+    # Context-aware hyphen/minus handling (order matters):
+    # Triple+ dashes (---): remove entirely
+    text = re.sub(r'-{3,}', ' ', text)
+    # Double dash flags: "--force" → "double dash force"
+    text = re.sub(r'(?<!\w)--(?=\w)', 'double dash ', text)
+    # Single dash flags: "-f" → "dash f"
+    text = re.sub(r'(?<!\w)-(?=\w)', 'dash ', text)
+    # Math with spaces: "5 - 3", "x - y" → "minus"
+    text = re.sub(r'(?<=\w)\s+-\s+(?=\w)', ' minus ', text)
+    # Range between digits without spaces: "5-3" → "5 to 3"
+    text = re.sub(r'(\d)-(\d)', r'\1 to \2', text)
+    # Hyphen joining words: "Decision-Making" → "Decision Making"
+    text = re.sub(r'([A-Za-z])-([A-Za-z])', r'\1 \2', text)
+    # Cleanup any remaining stray dashes
+    text = re.sub(r'\s*-\s*', ' ', text)
     return text
 
 
