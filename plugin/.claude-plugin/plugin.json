@@ -1,0 +1,10 @@
+{
+  "name": "glados-tts",
+  "version": "1.0.0",
+  "description": "GLaDOS personality plugin with neural TTS voice synthesis. All responses spoken in GLaDOS voice using Forward Tacotron and HiFiGAN.",
+  "author": {
+    "name": "Kenji Sison"
+  },
+  "homepage": "https://github.com/prosecutorpotato/glados-claude-plugin",
+  "license": "MIT"
+}

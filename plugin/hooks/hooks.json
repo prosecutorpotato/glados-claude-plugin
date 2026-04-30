@@ -1,0 +1,27 @@
+{
+  "description": "GLaDOS TTS - Speak all responses in GLaDOS voice",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/bin/speak.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/bin/serve.sh",
+            "timeout": 25
+          }
+        ]
+      }
+    ]
+  }
+}

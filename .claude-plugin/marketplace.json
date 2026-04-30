@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "name": "glados-tts",
+  "display_name": "GLaDOS TTS",
+  "description": "GLaDOS personality with neural text-to-speech. All responses spoken in GLaDOS's voice.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kenji Sison"
+  },
+  "source": "https://github.com/prosecutorpotato/glados-claude-plugin",
+  "license": "MIT",
+  "tags": ["personality", "tts", "voice", "glados", "portal"],
+  "plugin_root": "plugin"
+}
