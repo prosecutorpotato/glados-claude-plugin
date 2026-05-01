@@ -25,13 +25,17 @@ if [[ ! -d "${VENV_DIR}" ]]; then
     exit 0
 fi
 
+# Ensure audio cache directory exists
+mkdir -p "${GLADOS_STATE_DIR}/audio"
+
 # Start TTS server in background
 echo "[GLaDOS TTS] Starting server..."
+GLADOS_AUDIO_DIR="${GLADOS_STATE_DIR}/audio" \
 "${VENV_DIR}/bin/python" "${PLUGIN_ROOT}/tts/engine.py" \
-    > "${PLUGIN_ROOT}/tts/server.log" 2>&1 &
+    > "${GLADOS_STATE_DIR}/server.log" 2>&1 &
 
 SERVER_PID=$!
-echo "${SERVER_PID}" > "${PLUGIN_ROOT}/tts/server.pid"
+echo "${SERVER_PID}" > "${GLADOS_STATE_DIR}/server.pid"
 
 # Wait for server to become ready (max 25s - model loading includes 63MB phonemizer)
 wait_for_server 25

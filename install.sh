@@ -65,11 +65,24 @@ download_model "${VOCODER_URL}" "${MODELS_DIR}/vocoder-gpu.pt" "HiFiGAN Vocoder 
 download_model "${EMB_URL}" "${MODELS_DIR}/emb/glados_p2.pt" "Speaker Embedding (glados_p2.pt)"
 download_model "${PHONEMIZER_URL}" "${MODELS_DIR}/en_us_cmudict_ipa_forward.pt" "Phonemizer Model (en_us_cmudict_ipa_forward.pt)"
 
-# --- Audio directory ---
+# --- State directory ---
 echo ""
-echo "[3/5] Creating audio cache directory..."
-mkdir -p "${TTS_DIR}/audio"
-echo "  ✓ Done"
+echo "[3/5] Creating runtime state directory..."
+
+# Resolve GLADOS_STATE_DIR (same logic as plugin/lib/state-dir.sh)
+if [[ -n "${GLADOS_STATE_DIR:-}" ]]; then
+    :
+elif [[ -n "${CORTEX_SESSION_ID:-}" ]]; then
+    GLADOS_STATE_DIR="${HOME}/.snowflake/cortex/cache/glados"
+elif [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
+    GLADOS_STATE_DIR="${HOME}/.claude/cache/glados"
+else
+    GLADOS_STATE_DIR="${HOME}/.local/state/glados-tts"
+fi
+
+mkdir -p "${GLADOS_STATE_DIR}/sessions"
+mkdir -p "${GLADOS_STATE_DIR}/audio"
+echo "  ✓ State directory: ${GLADOS_STATE_DIR}"
 
 # --- Global registration ---
 echo ""

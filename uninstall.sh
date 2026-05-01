@@ -223,13 +223,25 @@ fi
 
 # --- Remove audio cache ---
 if [[ -d "${TTS_DIR}/audio" ]]; then
-    echo "Removing audio cache..."
+    echo "Removing legacy audio cache..."
     rm -rf "${TTS_DIR}/audio"
-    echo "  ✓ Audio cache removed"
+    echo "  ✓ Legacy audio cache removed"
 fi
 
-# Remove server runtime files
+# Remove legacy server runtime files (pre-state-dir migration)
 rm -f "${TTS_DIR}/server.log" "${TTS_DIR}/server.pid"
+
+# --- Remove runtime state directory ---
+echo "Removing runtime state directories..."
+for state_dir in \
+    "${HOME}/.snowflake/cortex/cache/glados" \
+    "${HOME}/.claude/cache/glados" \
+    "${HOME}/.local/state/glados-tts"; do
+    if [[ -d "${state_dir}" ]]; then
+        rm -rf "${state_dir}"
+        echo "  ✓ Removed ${state_dir}"
+    fi
+done
 
 echo ""
 echo "Uninstall complete. Plugin source code remains — models, dependencies, and"

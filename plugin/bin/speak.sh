@@ -23,7 +23,7 @@ if [[ -z "${TRANSCRIPT_PATH}" || ! -f "${TRANSCRIPT_PATH}" ]]; then
 fi
 
 # Check if this session has opted in to GLaDOS TTS
-SESSIONS_DIR="${PLUGIN_ROOT}/tts/sessions"
+SESSIONS_DIR="${GLADOS_STATE_DIR}/sessions"
 if [[ -z "${SESSION_ID}" || ! -f "${SESSIONS_DIR}/${SESSION_ID}" ]]; then
     exit 0  # Session not opted in, skip silently
 fi
@@ -34,7 +34,7 @@ if ! is_server_running; then
 fi
 
 # Check global mute
-if [[ -f "${PLUGIN_ROOT}/tts/.muted" ]]; then
+if [[ -f "${GLADOS_STATE_DIR}/.muted" ]]; then
     exit 0
 fi
 

@@ -4,8 +4,9 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "${PLUGIN_ROOT}/lib/state-dir.sh"
 
-PID_FILE="${PLUGIN_ROOT}/tts/server.pid"
+PID_FILE="${GLADOS_STATE_DIR}/server.pid"
 
 if [[ -f "${PID_FILE}" ]]; then
     PID=$(cat "${PID_FILE}")

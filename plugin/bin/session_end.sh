@@ -20,7 +20,7 @@ if [[ -z "${SESSION_ID}" ]]; then
     exit 0
 fi
 
-SESSIONS_DIR="${PLUGIN_ROOT}/tts/sessions"
+SESSIONS_DIR="${GLADOS_STATE_DIR}/sessions"
 
 # Remove session registration and per-session mute
 rm -f "${SESSIONS_DIR}/${SESSION_ID}"

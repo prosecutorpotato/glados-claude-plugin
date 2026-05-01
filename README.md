@@ -163,7 +163,7 @@ glados-claude-plugin/
 │   │   ├── engine.py               # Flask TTS server (port 8124)
 │   │   ├── glados.py               # TTS runner (Forward Tacotron + HiFiGAN)
 │   │   ├── requirements.txt
-│   │   ├── sessions/               # Session registry (opt-in markers + per-session mute)
+│   │   ├── sessions/               # (legacy — sessions now in state dir)
 │   │   ├── utils/
 │   │   │   ├── __init__.py
 │   │   │   ├── tools.py            # prepare_text() — text → phoneme tensor
@@ -195,11 +195,35 @@ glados-claude-plugin/
 │   │   ├── glados_restart_server.sh # Restart TTS server
 │   │   └── extract-response.py     # Parse transcript for TTS input
 │   └── lib/
-│       └── tts-helpers.sh          # Shared bash utilities
+│       ├── state-dir.sh             # Resolves GLADOS_STATE_DIR per platform
+│       └── tts-helpers.sh           # Shared bash utilities
 ├── install.sh                      # One-command setup + global registration
 ├── uninstall.sh                    # Clean removal + deregistration
 ├── LICENSE                         # MIT
 └── README.md
+```
+
+## Runtime State
+
+All ephemeral runtime state (sessions, mute flags, PID, logs, audio cache) lives **outside** the git repo in a platform-appropriate directory:
+
+| Tool | State directory |
+|------|----------------|
+| Cortex Code | `~/.snowflake/cortex/cache/glados/` |
+| Claude Code | `~/.claude/cache/glados/` |
+| Fallback | `~/.local/state/glados-tts/` |
+
+Detection is automatic based on `CORTEX_SESSION_ID` / `CLAUDE_SESSION_ID` environment variables. Override with `GLADOS_STATE_DIR` if needed.
+
+```
+$GLADOS_STATE_DIR/
+├── sessions/
+│   ├── <session-id>          # Opt-in marker (one per active session)
+│   └── .muted-<session-id>  # Per-session mute flag
+├── .muted                    # Global mute flag
+├── server.pid                # TTS server process ID
+├── server.log                # TTS server output log
+└── audio/                    # Synthesized WAV cache (cleaned on server start)
 ```
 
 ## TTS Architecture
@@ -241,14 +265,14 @@ MIT — see [LICENSE](LICENSE)
 ### Server won't start
 - Check if port 8124 is already in use: `lsof -i:8124`
 - Verify models exist: `ls plugin/tts/models/`
-- Check server logs: `cat plugin/tts/server.log`
+- Check server logs: `cat ~/.snowflake/cortex/cache/glados/server.log`
 - The phonemizer model (`en_us_cmudict_ipa_forward.pt`) takes several seconds to load on first start
 
 ### No audio playback
 - macOS: Ensure `afplay` is available (built into macOS)
 - Linux: Ensure `aplay` is installed (`sudo apt install alsa-utils`)
 - Check that the TTS server responds: `curl http://localhost:8124/health`
-- Check if audio is muted: `ls plugin/tts/.muted` — if the file exists, run `./plugin/bin/glados_unmute.sh`
+- Check if audio is muted: `ls ~/.snowflake/cortex/cache/glados/.muted` — if the file exists, run `./plugin/bin/glados_unmute.sh`
 
 ### Audio delays text display
 - This shouldn't happen — synthesis runs in a background subshell
@@ -270,6 +294,6 @@ MIT — see [LICENSE](LICENSE)
 - Re-run `./install.sh` to re-register hooks
 
 ### No audio despite /glados being active
-- Verify session is registered: `ls plugin/tts/sessions/` should contain your session ID
+- Verify session is registered: `ls ~/.snowflake/cortex/cache/glados/sessions/` should contain your session ID
 - Check `CORTEX_SESSION_ID` is set: `echo $CORTEX_SESSION_ID`
-- Ensure no mute file: `ls plugin/tts/.muted` or `ls plugin/tts/sessions/.muted-*`
+- Ensure no mute file: `ls ~/.snowflake/cortex/cache/glados/.muted` or `ls ~/.snowflake/cortex/cache/glados/sessions/.muted-*`

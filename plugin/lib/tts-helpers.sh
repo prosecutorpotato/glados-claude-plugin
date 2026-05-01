@@ -3,7 +3,11 @@
 
 TTS_PORT=8124
 PLUGIN_ROOT="${PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-PID_FILE="${PLUGIN_ROOT}/tts/server.pid"
+
+# Resolve state directory (sessions, mute flags, PID, logs, audio)
+source "${PLUGIN_ROOT}/lib/state-dir.sh"
+
+PID_FILE="${GLADOS_STATE_DIR}/server.pid"
 
 is_server_running() {
     # Check by PID file first

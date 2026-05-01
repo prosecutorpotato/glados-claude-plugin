@@ -20,7 +20,9 @@ app = Flask(__name__)
 # Resolve models dir relative to this file
 PLUGIN_TTS_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(PLUGIN_TTS_DIR, "models")
-AUDIO_DIR = os.path.join(PLUGIN_TTS_DIR, "audio")
+
+# Audio output goes to state directory (set by serve.sh via GLADOS_AUDIO_DIR env var)
+AUDIO_DIR = os.environ.get("GLADOS_AUDIO_DIR", os.path.join(PLUGIN_TTS_DIR, "audio"))
 
 os.makedirs(AUDIO_DIR, exist_ok=True)
 

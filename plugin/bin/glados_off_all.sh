@@ -6,7 +6,7 @@ set -euo pipefail
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "${PLUGIN_ROOT}/lib/tts-helpers.sh"
 
-SESSIONS_DIR="${PLUGIN_ROOT}/tts/sessions"
+SESSIONS_DIR="${GLADOS_STATE_DIR}/sessions"
 
 # Remove all session registrations and per-session mute files
 if [[ -d "${SESSIONS_DIR}" ]]; then

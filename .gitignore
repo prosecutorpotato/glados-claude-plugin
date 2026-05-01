@@ -9,16 +9,6 @@ plugin/tts/models/emb/*.pt
 # TTS virtual environment
 plugin/tts/.venv/
 
-# Audio cache (generated at runtime)
-plugin/tts/audio/
-
-# Server runtime files
-plugin/tts/server.pid
-plugin/tts/server.log
-
-# Mute state flag (user-toggled at runtime)
-plugin/tts/.muted
-
 # Plans (auto-generated, may contain local paths)
 plans/
 
