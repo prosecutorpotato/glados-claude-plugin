@@ -42,8 +42,9 @@ modified = False
 
 serve_cmd = f"bash {plugin_dir}/bin/serve.sh"
 speak_cmd = f"bash {plugin_dir}/bin/speak.sh"
+session_end_cmd = f"bash {plugin_dir}/bin/session_end.sh"
 
-# Remove SessionStart hooks matching our command
+# Remove SessionStart hooks (legacy)
 session_start = hooks.get('SessionStart', [])
 new_session_start = [
     entry for entry in session_start
@@ -56,7 +57,7 @@ if len(new_session_start) != len(session_start):
     else:
         hooks.pop('SessionStart', None)
 
-# Remove Stop hooks matching our command
+# Remove Stop hooks
 stop = hooks.get('Stop', [])
 new_stop = [
     entry for entry in stop
@@ -68,6 +69,19 @@ if len(new_stop) != len(stop):
         hooks['Stop'] = new_stop
     else:
         hooks.pop('Stop', None)
+
+# Remove SessionEnd hooks
+session_end = hooks.get('SessionEnd', [])
+new_session_end = [
+    entry for entry in session_end
+    if not any(h.get('command', '') == session_end_cmd for h in entry.get('hooks', []))
+]
+if len(new_session_end) != len(session_end):
+    modified = True
+    if new_session_end:
+        hooks['SessionEnd'] = new_session_end
+    else:
+        hooks.pop('SessionEnd', None)
 
 if not hooks:
     settings.pop('hooks', None)
@@ -105,7 +119,9 @@ modified = False
 
 serve_cmd = f"bash {plugin_dir}/bin/serve.sh"
 speak_cmd = f"bash {plugin_dir}/bin/speak.sh"
+session_end_cmd = f"bash {plugin_dir}/bin/session_end.sh"
 
+# Remove SessionStart hooks (legacy)
 session_start = hooks.get('SessionStart', [])
 new_session_start = [
     entry for entry in session_start
@@ -118,6 +134,7 @@ if len(new_session_start) != len(session_start):
     else:
         hooks.pop('SessionStart', None)
 
+# Remove Stop hooks
 stop = hooks.get('Stop', [])
 new_stop = [
     entry for entry in stop
@@ -129,6 +146,19 @@ if len(new_stop) != len(stop):
         hooks['Stop'] = new_stop
     else:
         hooks.pop('Stop', None)
+
+# Remove SessionEnd hooks
+session_end = hooks.get('SessionEnd', [])
+new_session_end = [
+    entry for entry in session_end
+    if not any(h.get('command', '') == session_end_cmd for h in entry.get('hooks', []))
+]
+if len(new_session_end) != len(session_end):
+    modified = True
+    if new_session_end:
+        hooks['SessionEnd'] = new_session_end
+    else:
+        hooks.pop('SessionEnd', None)
 
 if not hooks:
     settings.pop('hooks', None)
@@ -154,7 +184,7 @@ remove_slash_commands() {
     local label="$2"
     local removed=false
 
-    for cmd in glados_mute glados_unmute glados_restart_server; do
+    for cmd in glados_mute glados_unmute glados_mute_session glados_unmute_session glados_restart_server glados_off glados_off_all; do
         if [[ -f "${commands_dir}/${cmd}.md" ]]; then
             rm -f "${commands_dir}/${cmd}.md"
             removed=true
@@ -168,6 +198,13 @@ remove_slash_commands() {
 
 remove_slash_commands "$HOME/.snowflake/cortex/commands" "Cortex Code"
 remove_slash_commands "$HOME/.claude/commands" "Claude Code"
+
+# --- Remove session registry ---
+if [[ -d "${TTS_DIR}/sessions" ]]; then
+    echo "Removing session registry..."
+    rm -rf "${TTS_DIR}/sessions"
+    echo "  ✓ Sessions directory removed"
+fi
 
 # --- Remove models ---
 if [[ -d "${TTS_DIR}/models" ]]; then

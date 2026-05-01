@@ -1,5 +1,5 @@
 {
-  "description": "GLaDOS TTS - Speak all responses in GLaDOS voice",
+  "description": "GLaDOS TTS - Speak responses in GLaDOS voice (session-scoped)",
   "hooks": {
     "Stop": [
       {
@@ -12,13 +12,13 @@
         ]
       }
     ],
-    "SessionStart": [
+    "SessionEnd": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/bin/serve.sh",
-            "timeout": 25
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/bin/session_end.sh",
+            "timeout": 10
           }
         ]
       }

@@ -11,15 +11,21 @@ source "${PLUGIN_ROOT}/lib/tts-helpers.sh"
 # Read hook input from stdin
 INPUT=$(cat)
 
-# Extract transcript path from hook input
-TRANSCRIPT_PATH=$(echo "${INPUT}" | python3 -c "
+# Extract transcript path and session_id from hook input
+read -r TRANSCRIPT_PATH SESSION_ID < <(echo "${INPUT}" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-print(data.get('transcript_path', ''))
-" 2>/dev/null || echo "")
+print(data.get('transcript_path', ''), data.get('session_id', ''))
+" 2>/dev/null || echo " ")
 
 if [[ -z "${TRANSCRIPT_PATH}" || ! -f "${TRANSCRIPT_PATH}" ]]; then
     exit 0  # No transcript available, skip silently
+fi
+
+# Check if this session has opted in to GLaDOS TTS
+SESSIONS_DIR="${PLUGIN_ROOT}/tts/sessions"
+if [[ -z "${SESSION_ID}" || ! -f "${SESSIONS_DIR}/${SESSION_ID}" ]]; then
+    exit 0  # Session not opted in, skip silently
 fi
 
 # Check if server is running
@@ -27,8 +33,13 @@ if ! is_server_running; then
     exit 0  # Server not running, skip silently
 fi
 
-# Check if audio is muted
+# Check global mute
 if [[ -f "${PLUGIN_ROOT}/tts/.muted" ]]; then
+    exit 0
+fi
+
+# Check per-session mute
+if [[ -f "${SESSIONS_DIR}/.muted-${SESSION_ID}" ]]; then
     exit 0
 fi
 

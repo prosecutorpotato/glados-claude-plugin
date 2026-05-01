@@ -6,9 +6,10 @@ All responses generated while the GLaDOS skill is active are automatically spoke
 
 ## How It Works
 
-1. **SessionStart hook** — auto-launches a local TTS Flask server on port 8124
-2. **Stop hook** — after each response, extracts the assistant text, sends it to the TTS server asynchronously, and plays the resulting audio (text displays immediately, audio plays in background)
-3. **GLaDOS skill** — personality instructions that make all responses sound like the Aperture Science Enrichment Center
+1. **`/glados` skill activation** — registers the current session for TTS and starts the server on-demand
+2. **Stop hook** — after each response, checks if the session is opted-in, then synthesizes and plays audio in the background
+3. **SessionEnd hook** — cleans up the session registration and stops the server if no sessions remain active
+4. **GLaDOS skill** — personality instructions that make all responses sound like the Aperture Science Enrichment Center
 
 ## Prerequisites
 
@@ -31,16 +32,16 @@ The install script will:
 2. Install Python dependencies (PyTorch, Flask, deep-phonemizer, etc.)
 3. Download the TTS model files (~260MB) from the R2D2FISH/glados-tts repo
 4. Register global hooks and skills for both **Cortex Code** and **Claude Code**
-5. Install slash commands (`/glados_mute`, `/glados_unmute`, `/glados_restart_server`)
+5. Install slash commands for session control
 
 ### What Gets Registered
 
 | Platform | Config Location | What |
 |----------|----------------|------|
-| Cortex Code | `~/.snowflake/cortex/settings.json` | SessionStart + Stop hooks |
+| Cortex Code | `~/.snowflake/cortex/settings.json` | Stop + SessionEnd hooks |
 | Cortex Code | `~/.snowflake/cortex/skills/glados/` | GLaDOS personality skill |
 | Cortex Code | `~/.snowflake/cortex/commands/` | Slash commands |
-| Claude Code | `~/.claude/settings.json` | SessionStart + Stop hooks |
+| Claude Code | `~/.claude/settings.json` | Stop + SessionEnd hooks |
 | Claude Code | `~/.claude/commands/` | Slash commands |
 
 ### Manual Model Download
@@ -58,25 +59,47 @@ Source: https://github.com/R2D2FISH/glados-tts/tree/main/models
 
 ## Usage
 
-Once installed, the plugin activates automatically when a session starts:
+Once installed, the plugin uses a **session opt-in** model — audio only plays for sessions that explicitly activate GLaDOS:
 
-1. The TTS server starts in the background (SessionStart hook)
-2. Activate the GLaDOS personality with `/glados` or say "glados mode"
-3. Every response will be spoken in GLaDOS's voice (Stop hook)
+1. Start a session normally — no TTS server starts, no audio plays
+2. Activate with `/glados` or say "glados mode" — this registers the session and starts the TTS server
+3. Every response in that session will be spoken in GLaDOS's voice
+4. Other sessions remain unaffected unless they also opt in
 
 Text responses display immediately — audio synthesis and playback happen asynchronously in the background.
 
 ### Audio Control
 
-Use the slash commands in-session or run the scripts directly:
+| Command | Effect |
+|---------|--------|
+| `/glados_mute` | Mute TTS globally (all sessions) |
+| `/glados_unmute` | Unmute TTS globally |
+| `/glados_mute_session` | Mute TTS for this session only |
+| `/glados_unmute_session` | Unmute TTS for this session only |
+| `/glados_off` | Deactivate TTS for this session (unregister) |
+| `/glados_off_all` | Deactivate TTS for ALL sessions and stop server |
+| `/glados_restart_server` | Restart the TTS server |
 
-| Command | Script | Effect |
-|---------|--------|--------|
-| `/glados_mute` | `./plugin/bin/glados_mute.sh` | Mute TTS (text responses still display) |
-| `/glados_unmute` | `./plugin/bin/glados_unmute.sh` | Unmute TTS (audio resumes) |
-| `/glados_restart_server` | `./plugin/bin/glados_restart_server.sh` | Restart the TTS server |
+Scripts can also be run directly:
 
-Muting is useful when you're in a meeting or don't want audio playback. The mute state persists across responses until you unmute.
+```bash
+./plugin/bin/glados_mute.sh            # Global mute
+./plugin/bin/glados_mute.sh --session  # Session mute
+./plugin/bin/glados_unmute.sh          # Global unmute
+./plugin/bin/glados_unmute.sh --session # Session unmute
+./plugin/bin/glados_off.sh             # Deactivate this session
+./plugin/bin/glados_off_all.sh         # Deactivate all sessions
+./plugin/bin/glados_restart_server.sh  # Restart server
+```
+
+### Session Isolation
+
+Each session has independent mute state:
+- **Global mute** (`/glados_mute`) — silences ALL opted-in sessions
+- **Session mute** (`/glados_mute_session`) — silences only the current session
+- Sessions that haven't activated `/glados` never receive audio
+
+Session registrations are cleaned up automatically when a session ends (via the `SessionEnd` hook).
 
 ### Manual Server Control
 
@@ -96,7 +119,7 @@ curl http://localhost:8124/health
 
 ### Session Teardown
 
-The TTS server runs as a background process. It is **not** automatically killed when a session ends. To stop it:
+The TTS server is stopped automatically when the last opted-in session ends. You can also stop it manually:
 
 ```bash
 ./plugin/bin/stop.sh
@@ -118,6 +141,7 @@ This removes:
 - Downloaded models (~260MB)
 - Python virtual environment
 - Audio cache
+- Session registry
 - Global hooks from Cortex Code and Claude Code settings
 - GLaDOS skill from `~/.snowflake/cortex/skills/`
 - Slash commands from both platforms
@@ -139,6 +163,7 @@ glados-claude-plugin/
 │   │   ├── engine.py               # Flask TTS server (port 8124)
 │   │   ├── glados.py               # TTS runner (Forward Tacotron + HiFiGAN)
 │   │   ├── requirements.txt
+│   │   ├── sessions/               # Session registry (opt-in markers + per-session mute)
 │   │   ├── utils/
 │   │   │   ├── __init__.py
 │   │   │   ├── tools.py            # prepare_text() — text → phoneme tensor
@@ -155,11 +180,18 @@ glados-claude-plugin/
 │   │       └── emb/
 │   │           └── glados_p2.pt    # Speaker embedding
 │   ├── bin/
-│   │   ├── serve.sh                # Start TTS server (SessionStart hook)
+│   │   ├── serve.sh                # Start TTS server
 │   │   ├── speak.sh                # Async synthesize + play (Stop hook)
 │   │   ├── stop.sh                 # Stop TTS server
-│   │   ├── glados_mute.sh          # Mute audio playback
-│   │   ├── glados_unmute.sh        # Unmute audio playback
+│   │   ├── session_end.sh          # Clean up session (SessionEnd hook)
+│   │   ├── glados_activate.sh      # Register session + start server on-demand
+│   │   ├── glados_deactivate.sh    # Unregister session + stop if last
+│   │   ├── glados_off.sh           # Deactivate this session (wraps deactivate)
+│   │   ├── glados_off_all.sh       # Deactivate ALL sessions + stop server
+│   │   ├── glados_mute.sh          # Mute audio (global or --session)
+│   │   ├── glados_unmute.sh        # Unmute audio (global or --session)
+│   │   ├── glados_mute_session.sh  # Mute audio for this session
+│   │   ├── glados_unmute_session.sh # Unmute audio for this session
 │   │   ├── glados_restart_server.sh # Restart TTS server
 │   │   └── extract-response.py     # Parse transcript for TTS input
 │   └── lib/
@@ -233,6 +265,11 @@ MIT — see [LICENSE](LICENSE)
 - CPU-only fallback works fine (synthesis is fast enough on CPU)
 
 ### Hooks not triggering
-- Cortex Code: Check `~/.snowflake/cortex/settings.json` has SessionStart and Stop hooks
-- Claude Code: Check `~/.claude/settings.json` has SessionStart and Stop hooks
+- Cortex Code: Check `~/.snowflake/cortex/settings.json` has Stop and SessionEnd hooks
+- Claude Code: Check `~/.claude/settings.json` has Stop and SessionEnd hooks
 - Re-run `./install.sh` to re-register hooks
+
+### No audio despite /glados being active
+- Verify session is registered: `ls plugin/tts/sessions/` should contain your session ID
+- Check `CORTEX_SESSION_ID` is set: `echo $CORTEX_SESSION_ID`
+- Ensure no mute file: `ls plugin/tts/.muted` or `ls plugin/tts/sessions/.muted-*`

@@ -80,29 +80,19 @@ register_cortex_code() {
     local settings_file="${config_dir}/settings.json"
     local skills_dir="${config_dir}/skills/glados"
 
-    # Install skill files
+    # Install skill files (substitute __PLUGIN_DIR__ placeholder with actual path)
     mkdir -p "${skills_dir}"
-    cp -f "${PLUGIN_DIR}/skills/glados/"*.md "${skills_dir}/"
+    for skill_file in "${PLUGIN_DIR}/skills/glados/"*.md; do
+        sed "s|__PLUGIN_DIR__|${PLUGIN_DIR}|g" "${skill_file}" > "${skills_dir}/$(basename "${skill_file}")"
+    done
     echo "  ✓ GLaDOS skill installed to ${skills_dir}"
 
-    # Register hooks in settings.json
+    # Register hooks in settings.json (Stop + SessionEnd only; no SessionStart)
     if [[ ! -f "${settings_file}" ]]; then
-        # Create minimal settings with hooks
         mkdir -p "${config_dir}"
         cat > "${settings_file}" << SETTINGS_EOF
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${PLUGIN_DIR}/bin/serve.sh",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
@@ -113,13 +103,23 @@ register_cortex_code() {
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${PLUGIN_DIR}/bin/session_end.sh",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
 SETTINGS_EOF
         echo "  ✓ Created ${settings_file} with hooks"
     else
-        # Merge hooks into existing settings using Python
         python3 << MERGE_EOF
 import json, sys
 
@@ -131,20 +131,15 @@ with open(settings_file, 'r') as f:
 
 hooks = settings.setdefault('hooks', {})
 
-# SessionStart hook
+# Remove old SessionStart hook if present (migration from previous install)
 serve_cmd = f"bash {plugin_dir}/bin/serve.sh"
-session_start = hooks.get('SessionStart', [])
-# Check if already registered
-already_has_serve = any(
-    h.get('command', '') == serve_cmd
-    for entry in session_start
-    for h in entry.get('hooks', [])
-)
-if not already_has_serve:
-    session_start.append({
-        "hooks": [{"type": "command", "command": serve_cmd, "timeout": 30}]
-    })
-    hooks['SessionStart'] = session_start
+if 'SessionStart' in hooks:
+    hooks['SessionStart'] = [
+        entry for entry in hooks['SessionStart']
+        if not any(h.get('command', '') == serve_cmd for h in entry.get('hooks', []))
+    ]
+    if not hooks['SessionStart']:
+        del hooks['SessionStart']
 
 # Stop hook
 speak_cmd = f"bash {plugin_dir}/bin/speak.sh"
@@ -160,6 +155,20 @@ if not already_has_speak:
     })
     hooks['Stop'] = stop
 
+# SessionEnd hook
+session_end_cmd = f"bash {plugin_dir}/bin/session_end.sh"
+session_end = hooks.get('SessionEnd', [])
+already_has_end = any(
+    h.get('command', '') == session_end_cmd
+    for entry in session_end
+    for h in entry.get('hooks', [])
+)
+if not already_has_end:
+    session_end.append({
+        "hooks": [{"type": "command", "command": session_end_cmd, "timeout": 10}]
+    })
+    hooks['SessionEnd'] = session_end
+
 with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
     f.write('\n')
@@ -173,7 +182,6 @@ register_claude_code() {
     local config_dir="$HOME/.claude"
     local settings_file="${config_dir}/settings.json"
 
-    # Claude Code uses a different settings structure
     if [[ ! -d "${config_dir}" ]]; then
         echo "  - Claude Code not detected (no ~/.claude), skipping"
         return 0
@@ -183,17 +191,6 @@ register_claude_code() {
         cat > "${settings_file}" << SETTINGS_EOF
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${PLUGIN_DIR}/bin/serve.sh",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
@@ -201,6 +198,17 @@ register_claude_code() {
             "type": "command",
             "command": "bash ${PLUGIN_DIR}/bin/speak.sh",
             "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${PLUGIN_DIR}/bin/session_end.sh",
+            "timeout": 10
           }
         ]
       }
@@ -221,19 +229,17 @@ with open(settings_file, 'r') as f:
 
 hooks = settings.setdefault('hooks', {})
 
+# Remove old SessionStart hook if present (migration)
 serve_cmd = f"bash {plugin_dir}/bin/serve.sh"
-session_start = hooks.get('SessionStart', [])
-already_has_serve = any(
-    h.get('command', '') == serve_cmd
-    for entry in session_start
-    for h in entry.get('hooks', [])
-)
-if not already_has_serve:
-    session_start.append({
-        "hooks": [{"type": "command", "command": serve_cmd, "timeout": 30}]
-    })
-    hooks['SessionStart'] = session_start
+if 'SessionStart' in hooks:
+    hooks['SessionStart'] = [
+        entry for entry in hooks['SessionStart']
+        if not any(h.get('command', '') == serve_cmd for h in entry.get('hooks', []))
+    ]
+    if not hooks['SessionStart']:
+        del hooks['SessionStart']
 
+# Stop hook
 speak_cmd = f"bash {plugin_dir}/bin/speak.sh"
 stop = hooks.get('Stop', [])
 already_has_speak = any(
@@ -246,6 +252,20 @@ if not already_has_speak:
         "hooks": [{"type": "command", "command": speak_cmd, "timeout": 30}]
     })
     hooks['Stop'] = stop
+
+# SessionEnd hook
+session_end_cmd = f"bash {plugin_dir}/bin/session_end.sh"
+session_end = hooks.get('SessionEnd', [])
+already_has_end = any(
+    h.get('command', '') == session_end_cmd
+    for entry in session_end
+    for h in entry.get('hooks', [])
+)
+if not already_has_end:
+    session_end.append({
+        "hooks": [{"type": "command", "command": session_end_cmd, "timeout": 10}]
+    })
+    hooks['SessionEnd'] = session_end
 
 with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
@@ -280,11 +300,27 @@ CMD_EOF
 Run this command: bash ${PLUGIN_DIR}/bin/glados_unmute.sh
 CMD_EOF
 
+    cat > "${commands_dir}/glados_mute_session.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_mute_session.sh
+CMD_EOF
+
+    cat > "${commands_dir}/glados_unmute_session.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_unmute_session.sh
+CMD_EOF
+
     cat > "${commands_dir}/glados_restart_server.md" << CMD_EOF
 Run this command: bash ${PLUGIN_DIR}/bin/glados_restart_server.sh
 CMD_EOF
 
-    echo "  ✓ ${label}: /glados_mute, /glados_unmute, /glados_restart_server"
+    cat > "${commands_dir}/glados_off.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_off.sh
+CMD_EOF
+
+    cat > "${commands_dir}/glados_off_all.md" << CMD_EOF
+Run this command: bash ${PLUGIN_DIR}/bin/glados_off_all.sh
+CMD_EOF
+
+    echo "  ✓ ${label}: /glados_mute, /glados_unmute, /glados_mute_session, /glados_unmute_session, /glados_restart_server, /glados_off, /glados_off_all"
 }
 
 # Cortex Code commands
@@ -311,10 +347,13 @@ echo "  ${PLUGIN_DIR}/bin/serve.sh"
 echo "  curl http://localhost:8124/synthesize/Hello%20test%20subject"
 echo "  ${PLUGIN_DIR}/bin/stop.sh"
 echo ""
-echo "The plugin will auto-start the TTS server when a session begins."
-echo "Use /glados in-session to activate the GLaDOS personality."
+echo "The TTS server starts on-demand when you activate the /glados skill."
+echo "Only sessions that have opted in will receive audio output."
 echo ""
 echo "Slash commands available:"
-echo "  /glados_mute            - Mute audio playback"
-echo "  /glados_unmute          - Unmute audio playback"
+echo "  /glados                 - Activate GLaDOS personality + TTS for this session"
+echo "  /glados_mute            - Mute audio globally (all sessions)"
+echo "  /glados_unmute          - Unmute audio globally"
+echo "  /glados_mute_session    - Mute audio for this session only"
+echo "  /glados_unmute_session  - Unmute audio for this session only"
 echo "  /glados_restart_server  - Restart the TTS server"
